@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 > nul
 setlocal enabledelayedexpansion
+Version 1.1
 
 :: Clear out lingering variables so a deleted config forces a true fresh start
 set "GAME_NAME="
@@ -30,8 +31,8 @@ call :COLOR_TEXT "==============================================================
 echo.
 echo Would you like to setup Steam to automatically find your saves^?
 echo.
-echo   [1] Yes - Auto-scan for Steam / userdata
-echo   [2] No - Skip Steam setup
+echo    [1] Yes - Auto-scan for Steam / userdata
+echo    [2] No - Skip Steam setup
 echo.
 set "steam_choice="
 set /p "steam_choice=Select option (1 or 2): "
@@ -140,13 +141,11 @@ if not defined SELECTED_STEAM_ID (
 set "ACTIVE_ACCOUNT_DIR=%STEAM_USERDATA_PATH%\%SELECTED_STEAM_ID%"
 call :COLOR_TEXT "[+] Active Account Directory set to: %SELECTED_STEAM_ID%" "GREEN"
 
-:: Ensure config file variable exists
-if not defined CONFIG_FILE set "CONFIG_FILE=game_config.ini"
+:: Set completion flag in memory
+set "STEAM_SETUP_COMPLETE=YES"
 
-:: Save choices safely line-by-line (avoids parentheses parsing bugs)
-echo STEAM_USERDATA_PATH=%STEAM_USERDATA_PATH%>> "%CONFIG_FILE%"
-echo SELECTED_STEAM_ID=%SELECTED_STEAM_ID%>> "%CONFIG_FILE%"
-echo STEAM_SETUP_COMPLETE=YES>> "%CONFIG_FILE%"
+:: Centralized save via WRITE_CONFIG (ensures CONFIG_FILE path is respected and no duplicate keys exist)
+call :WRITE_CONFIG
 
 echo.
 call :COLOR_TEXT "[+] Steam setup configuration saved successfully!" "GREEN"
@@ -155,13 +154,15 @@ goto STEAM_SETUP_DONE
 :SKIP_STEAM
 echo.
 call :COLOR_TEXT "[-] Steam setup skipped." "YELLOW"
-if not defined CONFIG_FILE set "CONFIG_FILE=game_config.ini"
-echo STEAM_SETUP_COMPLETE=NO>> "%CONFIG_FILE%"
+set "STEAM_SETUP_COMPLETE=NO"
+call :WRITE_CONFIG
 
 :STEAM_SETUP_DONE
 echo.
 pause
 goto RUN_SETUP_ROUTINE
+
+
 
 :SETUP_STEAM_MENU
 cls
@@ -171,8 +172,8 @@ call :COLOR_TEXT "==============================================================
 echo.
 echo Would you like to setup Steam to automatically find your saves^?
 echo.
-echo   [1] Yes - Auto-scan for Steam / userdata
-echo   [2] No - Skip Steam setup
+echo    [1] Yes - Auto-scan for Steam / userdata
+echo    [2] No - Skip Steam setup
 echo.
 set "steam_choice="
 set /p "steam_choice=Select option (1 or 2): "
@@ -250,7 +251,7 @@ for /d %%A in ("%STEAM_USERDATA_PATH%\*") do (
 
 if %account_count% EQU 0 (
     call :COLOR_TEXT "[!] No Steam ID accounts found. Skipping." "RED"
-    goto SKIP_STEAM
+    goto SKIP_MENU_STEAM
 )
 
 if %account_count% EQU 1 (
@@ -281,20 +282,8 @@ if not defined SELECTED_STEAM_ID (
 set "ACTIVE_ACCOUNT_DIR=%STEAM_USERDATA_PATH%\%SELECTED_STEAM_ID%"
 call :COLOR_TEXT "[+] Active Account Directory set to: %SELECTED_STEAM_ID%" "GREEN"
 
-:: Ensure config file variable exists
-if not defined CONFIG_FILE set "CONFIG_FILE=game_config.ini"
-
-:: SCRUB duplicate/old Steam keys from the config file first so it stays clean
-findstr /v /i "STEAM_USERDATA_PATH SELECTED_STEAM_ID STEAM_SETUP_COMPLETE" "%CONFIG_FILE%" > "%CONFIG_FILE%.tmp"
-move /y "%CONFIG_FILE%.tmp" "%CONFIG_FILE%" >nul
-
-:: WRITE the fresh values cleanly once
-echo STEAM_USERDATA_PATH=%STEAM_USERDATA_PATH%>> "%CONFIG_FILE%"
-echo SELECTED_STEAM_ID=%SELECTED_STEAM_ID%>> "%CONFIG_FILE%"
-echo STEAM_SETUP_COMPLETE=YES>> "%CONFIG_FILE%"
-
-:: INSTANTLY update live memory variables so the inspector sees it right away!
 set "STEAM_SETUP_COMPLETE=YES"
+call :WRITE_CONFIG
 
 echo.
 call :COLOR_TEXT "[+] Steam setup configuration saved successfully!" "GREEN"
@@ -303,19 +292,12 @@ goto STEAM_SETUP_MENU_DONE
 :SKIP_MENU_STEAM
 echo.
 call :COLOR_TEXT "[-] Steam setup skipped." "YELLOW"
-if not defined CONFIG_FILE set "CONFIG_FILE=game_config.ini"
-
-findstr /v /i "STEAM_USERDATA_PATH SELECTED_STEAM_ID STEAM_SETUP_COMPLETE" "%CONFIG_FILE%" > "%CONFIG_FILE%.tmp"
-move /y "%CONFIG_FILE%.tmp" "%CONFIG_FILE%" >nul
-
-echo STEAM_SETUP_COMPLETE=NO>> "%CONFIG_FILE%"
 set "STEAM_SETUP_COMPLETE=NO"
-goto STEAM_SETUP_MENU_DONE
+call :WRITE_CONFIG
 
 :STEAM_SETUP_MENU_DONE
 echo.
 pause
-
 goto ACTION_INSPECTOR
 
 :: =================================================================
@@ -1565,6 +1547,7 @@ echo    [6] Change Game / Re-setup
 echo    [7] Cloud Sync / Import (Google Drive / OneDrive / Dropbox)
 echo    [8] Reset Game Config
 echo    [9] %TOGGLE_LABEL%
+echo    [U] Check for Script Updates
 echo    [X] Exit
 call :COLOR_TEXT "=================================================================" "THEME"
 set "insp_choice="
@@ -1599,6 +1582,10 @@ if "%insp_choice%"=="4" goto ACTION_SWITCH
 if "%insp_choice%"=="5" goto CHANGE_THEME
 if "%insp_choice%"=="6" goto CHANGE_GAME
 if "%insp_choice%"=="7" goto CloudInterface
+
+:: Catch user pressing [U] or [u] for self-update
+if /i "%insp_choice%"=="U" goto TRIGGER_UPDATER
+
 if "%insp_choice%"=="8" (
     del /q "%CONFIG_FILE%"
     call :COLOR_TEXT "[INFO] Config reset. Restart script." "YELLOW"
@@ -2018,6 +2005,21 @@ call :COLOR_TEXT "[+] Successfully imported saves from cloud storage!" "GREEN"
 timeout /t 2 >nul
 goto ACTION_INSPECTOR
 
+:TRIGGER_UPDATER
+cls
+echo.
+if not exist "updater.bat" (
+    call :COLOR_TEXT "[!] Error: 'updater.bat' companion script not found in folder." "RED"
+    echo Please make sure updater.bat is placed alongside the manager.
+    pause
+    goto ACTION_INSPECTOR
+)
+
+call :COLOR_TEXT "[*] Launching external updater..." "GREEN"
+:: Launch updater and pass the current script name as an argument
+start "" "updater.bat" "%~nx0"
+exit
+
 
 :: =================================================================
 :: POWERSHELL FOLDER BROWSER DIALOG SUBROUTINE
@@ -2033,14 +2035,14 @@ goto :eof
 :: WRITE CONFIG HELPER SUBROUTINE
 :: =================================================================
 :WRITE_CONFIG
-echo GAME_NAME=%GAME_NAME% > "%CONFIG_FILE%"
-echo SAVE_PATH=%SAVE_PATH% >> "%CONFIG_FILE%"
-echo WORKSPACE=%WORKSPACE% >> "%CONFIG_FILE%"
-echo ACTIVE_PROFILE=%ACTIVE_PROFILE% >> "%CONFIG_FILE%"
-echo PROFILE_COLOR=%PROFILE_COLOR% >> "%CONFIG_FILE%"
-echo STEAM_USERDATA_PATH=%STEAM_USERDATA_PATH% >> "%CONFIG_FILE%"
-echo SELECTED_STEAM_ID=%SELECTED_STEAM_ID% >> "%CONFIG_FILE%"
-echo STEAM_SETUP_COMPLETE=%STEAM_SETUP_COMPLETE% >> "%CONFIG_FILE%"
+(echo GAME_NAME=%GAME_NAME%)> "%CONFIG_FILE%"
+(echo SAVE_PATH=%SAVE_PATH%)>> "%CONFIG_FILE%"
+(echo WORKSPACE=%WORKSPACE%)>> "%CONFIG_FILE%"
+(echo ACTIVE_PROFILE=%ACTIVE_PROFILE%)>> "%CONFIG_FILE%"
+(echo PROFILE_COLOR=%PROFILE_COLOR%)>> "%CONFIG_FILE%"
+(echo STEAM_USERDATA_PATH=%STEAM_USERDATA_PATH%)>> "%CONFIG_FILE%"
+(echo SELECTED_STEAM_ID=%SELECTED_STEAM_ID%)>> "%CONFIG_FILE%"
+(echo STEAM_SETUP_COMPLETE=%STEAM_SETUP_COMPLETE%)>> "%CONFIG_FILE%"
 goto :eof
 
 :: =================================================================
