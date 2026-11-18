@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 > nul
 setlocal enabledelayedexpansion
-:: Version 1.1
+:: Version 1.2
 
 :: Clear out lingering variables so a deleted config forces a true fresh start
 set "GAME_NAME="
