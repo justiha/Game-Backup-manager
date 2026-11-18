@@ -2,6 +2,7 @@
 chcp 65001 > nul
 setlocal enabledelayedexpansion
 :: Version 1.1
+:: CHANGELOG: Github updating supported
 
 :: Initialize local version using the working pattern
 set "LOCAL_VER=Unknown"
