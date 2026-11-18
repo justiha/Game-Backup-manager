@@ -1,7 +1,15 @@
 @echo off
 chcp 65001 > nul
 setlocal enabledelayedexpansion
-:: Version 1.2
+:: Version 1.1
+
+:: Initialize local version using the working pattern
+set "LOCAL_VER=Unknown"
+for /f "tokens=1,* delims=:" %%a in ('findstr /i "version" "%~f0"') do (
+    set "LOCAL_VER=%%a %%b"
+    goto GOT_MAIN_LOCAL
+)
+:GOT_MAIN_LOCAL
 
 :: Clear out lingering variables so a deleted config forces a true fresh start
 set "GAME_NAME="
@@ -1491,6 +1499,36 @@ goto SPLASH_SCREEN
 if not defined VIEW_MODE set "VIEW_MODE=LIVE"
 set "TARGET_PROFILE_DIR=%WORKSPACE%\%GAME_NAME%\%ACTIVE_PROFILE%"
 
+:: =================================================================
+:: BACKGROUND VERSION CHECK FOR INSPECTOR HEADER (Using Working Logic)
+:: =================================================================
+set "ONLINE_VER=Unknown"
+set "INSPECTOR_UPDATE_NOTICE="
+
+set "INSPECTOR_TEMP_CHK=inspector_ver.tmp"
+powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/justiha/Game-Backup-manager/main/Game%%20save%%20manager.bat' -OutFile '%INSPECTOR_TEMP_CHK%'" -ErrorAction SilentlyContinue >nul 2>&1
+
+if exist "%INSPECTOR_TEMP_CHK%" (
+    for /f "tokens=1,* delims=:" %%a in ('findstr /i "version" "%INSPECTOR_TEMP_CHK%"') do (
+        set "ONLINE_VER=%%a %%b"
+        goto GOT_INSPECTOR_ONLINE
+    )
+    :GOT_INSPECTOR_ONLINE
+    del "%INSPECTOR_TEMP_CHK%" >nul
+)
+
+:: Compare local vs online version and format the notification
+if defined LOCAL_VER if defined ONLINE_VER (
+    if not "%LOCAL_VER%"=="%ONLINE_VER%" (
+        if not "%ONLINE_VER%"=="Unknown" (
+            set "INSPECTOR_UPDATE_NOTICE=Currently your version is %LOCAL_VER% please update to version %ONLINE_VER%. Press [U] to update!"
+        )
+    )
+)
+
+:: =================================================================
+:: RENDER INSPECTOR SCREEN
+:: =================================================================
 cls
 call :COLOR_TEXT "=================================================================" "THEME"
 call :COLOR_TEXT "         SAVE INSPECTOR: [%GAME_NAME%]" "WHITE"
@@ -1499,6 +1537,13 @@ echo    Active Profile: %ACTIVE_PROFILE%
 echo    Live Save Path: %SAVE_PATH%
 echo    TARGET_PROFILE: %TARGET_PROFILE_DIR%
 echo.
+
+:: Show clean update notice if a new version is detected
+if defined INSPECTOR_UPDATE_NOTICE (
+    call :COLOR_TEXT "    [!] %INSPECTOR_UPDATE_NOTICE%" "GREEN"
+    echo.
+)
+
 :: Dynamic Steam Status Display
 if /i "%STEAM_SETUP_COMPLETE%"=="YES" (
     call :COLOR_TEXT "    STEAM_SETUP_COMPLETE: YES (%SELECTED_STEAM_ID%)" "GREEN"
@@ -2016,7 +2061,7 @@ if not exist "updater.bat" (
 )
 
 call :COLOR_TEXT "[*] Launching external updater..." "GREEN"
-:: Launch updater and pass the current script name as an argument
+:: The empty "" handles the window title, letting "%~nx0" pass safely with spaces
 start "" "updater.bat" "%~nx0"
 exit
 
