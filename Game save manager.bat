@@ -1541,7 +1541,7 @@ echo.
 
 :: Show clean update notice if a new version is detected
 if defined INSPECTOR_UPDATE_NOTICE (
-    call :COLOR_TEXT "    [!] %INSPECTOR_UPDATE_NOTICE%" "GREEN"
+    call :COLOR_TEXT "     %INSPECTOR_UPDATE_NOTICE%" "GREEN"
     echo.
 )
 
