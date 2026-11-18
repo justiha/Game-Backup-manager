@@ -2051,22 +2051,6 @@ call :COLOR_TEXT "[+] Successfully imported saves from cloud storage!" "GREEN"
 timeout /t 2 >nul
 goto ACTION_INSPECTOR
 
-:TRIGGER_UPDATER
-cls
-echo.
-if not exist "updater.bat" (
-    call :COLOR_TEXT "[!] Error: 'updater.bat' companion script not found in folder." "RED"
-    echo Please make sure updater.bat is placed alongside the manager.
-    pause
-    goto ACTION_INSPECTOR
-)
-
-call :COLOR_TEXT "[*] Launching external updater..." "GREEN"
-:: The empty "" handles the window title, letting "%~nx0" pass safely with spaces
-start "" "updater.bat" "%~nx0"
-exit
-
-
 :: =================================================================
 :: POWERSHELL FOLDER BROWSER DIALOG SUBROUTINE
 :: =================================================================
@@ -2076,6 +2060,54 @@ for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "Add-Type -Ass
     set "SELECTED_CLOUD_DIR=%%I"
 )
 goto :eof
+
+:TRIGGER_UPDATER
+cls
+echo =================================================================
+echo                    GAME SAVE MANAGER - UPDATER
+echo =================================================================
+echo.
+if not exist "updater.bat" (
+    call :COLOR_TEXT "[!] Error: 'updater.bat' companion script not found in folder." "RED"
+    echo Please make sure updater.bat is placed alongside the manager.
+    echo.
+    pause
+    goto ACTION_INSPECTOR
+)
+
+call :COLOR_TEXT "[*] About the Updater Add-on:" "CYAN"
+echo   The Game Save Manager Updater is a standalone modular tool that
+echo   connects directly to the official GitHub repository to check for
+echo   new releases, bug fixes, and feature additions.
+echo.
+call :COLOR_TEXT "[*] What happens next:" "CYAN"
+echo   - This main manager window will close so the file can be updated.
+echo   - The updater will compare your local version against GitHub.
+echo   - You will see the latest changelog before choosing to overwrite
+echo     your current script, save a separate copy, or cancel.
+echo   - Your local save paths, configs, and backups remain untouched.
+echo.
+echo -----------------------------------------------------------------
+echo   [1] Continue and launch Updater
+echo   [B] Go back to Inspector
+echo -----------------------------------------------------------------
+echo.
+set "upd_choice="
+set /p "upd_choice=Select option (1 or B): "
+
+if /i "%upd_choice%"=="B" goto ACTION_INSPECTOR
+if "%upd_choice%"=="1" goto LAUNCH_UPDATER
+
+:: Fallback if user enters an invalid key
+goto TRIGGER_UPDATER
+
+:LAUNCH_UPDATER
+echo.
+call :COLOR_TEXT "[*] Launching external updater..." "GREEN"
+echo.
+:: The empty "" handles the window title, letting "%~nx0" pass safely with spaces
+start "" "updater.bat"
+exit
 
 :: =================================================================
 :: WRITE CONFIG HELPER SUBROUTINE
