@@ -2,7 +2,8 @@
 chcp 65001 > nul
 setlocal enabledelayedexpansion
 :: Version 1.1
-:: CHANGELOG: Github updating supported
+:: CHANGELOG: (1.1) Github updating supported
+:: CHANGELOG: (1.1) Downloading cloud links go back to the interface (import and export)
 
 :: Initialize local version using the working pattern
 set "LOCAL_VER=Unknown"
@@ -1987,19 +1988,19 @@ set /p "app_choice=Select option: "
 
 if "%app_choice%"=="1" (
     start "" "https://www.dropbox.com/download"
-    goto GET_DESKTOP_APPS
+    goto CloudInterface
 )
 if "%app_choice%"=="2" (
     start "" "https://www.google.com/drive/download/"
-    goto GET_DESKTOP_APPS
+    goto CloudInterface
 )
 if "%app_choice%"=="3" (
     start "" "https://www.microsoft.com/en-us/microsoft-365/onedrive/download"
-    goto GET_DESKTOP_APPS
+    goto CloudInterface
 )
 if "%app_choice%"=="4" goto CloudInterface
 
-goto GET_DESKTOP_APPS
+goto ADD_CLOUD_LINK
 
 :: =================================================================
 :: CLOUD SAVE IMPORT WORKFLOW
