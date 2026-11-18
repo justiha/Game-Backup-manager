@@ -3,7 +3,7 @@ chcp 65001 > nul
 setlocal enabledelayedexpansion
 :: Version 1.1
 :: CHANGELOG: (1.1) Github updating supported
-:: CHANGELOG: (1.1) Downloading cloud links go back to the interface (import and export)
+:: CHANGELOG: (1.1) Downloading cloud links go back to the interface (import)
 
 :: Initialize local version using the working pattern
 set "LOCAL_VER=Unknown"
@@ -1956,7 +1956,7 @@ call :COLOR_TEXT "==============================================================
 call :COLOR_TEXT "               CLOUD SYNC & LINKS MANAGER" "WHITE"
 call :COLOR_TEXT "=================================================================" "THEME"
 echo      [1] Download Links / Quick Shortcuts
-echo      [2] Import/Export Saves (Drive / Dropbox)
+echo      [2] Import Saves (Drive / Dropbox/ Onedrive)
 echo      [3] Back to Main Inspector
 echo.
 set "cloud_choice="
